@@ -7,7 +7,7 @@
 - Hiển thị `% RAM` trên Menu Bar, font `monospacedDigit`, đổi màu vàng (>80%) / đỏ (>90%).
 - Popover chi tiết: RAM đang dùng / tổng, progress bar, Active – Wired – Compressed (từ `host_statistics64`).
 - Top 5 tiến trình ngốn RAM nhất (libproc) kèm nút Force Quit.
-- Nút **Giải phóng RAM**: chạy `/usr/bin/purge` qua `NSAppleScript` với admin privileges, có thông báo macOS.
+- Nút **Giải phóng RAM**: chạy `/usr/sbin/purge` qua `NSAppleScript` với admin privileges, có thông báo macOS.
 - Toggle **Khởi động cùng macOS** (`SMAppService.mainApp`) và nút **Thoát**.
 - Cập nhật mỗi 2.5 giây bằng `Task.sleep` — không dùng Timer, CPU gần như 0% khi idle.
 
