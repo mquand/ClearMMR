@@ -21,8 +21,9 @@ struct RAMMenuLabel: View {
     var body: some View {
         HStack(spacing: 4) {
             RAMGlyph()
-                .frame(width: 12, height: 12)
-            Text("\(Int(percent.rounded()))%")
+                .frame(width: 13, height: 13)
+            Text("RAM \(Int(percent.rounded()))%")
+                .font(.system(size: 13, weight: .medium))
                 .monospacedDigit()
         }
         .foregroundStyle(color)
