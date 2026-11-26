@@ -82,9 +82,9 @@ final class RAMMonitor: ObservableObject {
     // MARK: - host_statistics64
 
     private func readHostStats() -> (used: UInt64, active: UInt64, wired: UInt64, compressed: UInt64)? {
-        var stats = host_statistics64_data_t()
+        var stats = vm_statistics64()
         var count = mach_msg_type_number_t(
-            MemoryLayout<host_statistics64_data_t>.stride / MemoryLayout<integer_t>.stride
+            MemoryLayout<vm_statistics64>.stride / MemoryLayout<integer_t>.stride
         )
         let result = withUnsafeMutablePointer(to: &stats) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
@@ -94,7 +94,7 @@ final class RAMMonitor: ObservableObject {
         guard result == KERN_SUCCESS else { return nil }
 
         let active = UInt64(stats.active_count) * pageSize
-        let wired = UInt64(stats.wired_count) * pageSize
+        let wired = UInt64(stats.wire_count) * pageSize
         let compressed = UInt64(stats.compressor_page_count) * pageSize
         return (active + wired + compressed, active, wired, compressed)
     }
@@ -124,13 +124,13 @@ final class RAMMonitor: ObservableObject {
             _ = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsdInfo, bsdSize)
 
             let name = Self.processName(from: &bsdInfo) ?? "pid \(pid)"
-            let cpuTime = taskInfo.total_user &+ taskInfo.total_system
+            let cpuTime = taskInfo.pti_total_user &+ taskInfo.pti_total_system
             let cpuPercent = processCPUPercent(pid: pid, cpuTime: cpuTime, uptime: nowUptime)
             seenPids.insert(pid)
             result.append(ProcessMemory(
                 pid: pid,
                 name: name,
-                residentBytes: UInt64(taskInfo.resident_size),
+                residentBytes: taskInfo.pti_resident_size,
                 cpuPercent: cpuPercent
             ))
         }
@@ -139,7 +139,7 @@ final class RAMMonitor: ObservableObject {
         return Array(result.sorted { $0.residentBytes > $1.residentBytes }.prefix(limit))
     }
 
-    // total_user/total_system của proc_taskinfo tính bằng nanosecond
+    // pti_total_user/pti_total_system của proc_taskinfo tính bằng nanosecond
     private func processCPUPercent(pid: pid_t, cpuTime: UInt64, uptime: TimeInterval) -> Double {
         defer { procLastSample[pid] = (cpuTime, uptime) }
         guard let prev = procLastSample[pid], uptime > prev.uptime else { return 0 }
@@ -269,11 +269,11 @@ final class RAMMonitor: ObservableObject {
 
     // Layout giống struct xsw_usage trong <sys/sysctl.h> (đã verify: total/avail/used tính bằng bytes)
     private struct SwapUsage {
-        var xsu_total: UInt64
-        var xsu_avail: UInt64
-        var xsu_used: UInt64
-        var xsu_pagesize: UInt32
-        var xsu_encrypted: Int32
+        var xsu_total: UInt64 = 0
+        var xsu_avail: UInt64 = 0
+        var xsu_used: UInt64 = 0
+        var xsu_pagesize: UInt32 = 0
+        var xsu_encrypted: Int32 = 0
     }
 
     private func readSwapUsage() -> (used: UInt64, total: UInt64)? {

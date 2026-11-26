@@ -56,10 +56,14 @@ App **không dùng App Sandbox** (binary tự build, không có entitlement) nê
 
 ## CI / Git workflow
 
-Workflow `.github/workflows/build.yml` chạy trên `macos-14` (có Xcode đầy đủ):
+Workflow `.github/workflows/build.yml` chạy trên `macos-15` (có Xcode đầy đủ),
+flow giống repo Rooted-Explorer: build universal (arm64 + x86_64) → ad-hoc sign
+→ đóng gói `.zip` + `.dmg` → upload artifact + GitHub Release.
 
-- Push lên `main` → build `ClearMMR.app`, đóng zip, upload artifact (giữ 30 ngày).
-- Push tag `v1.0.0` → tự tạo GitHub Release kèm file zip.
+- Push tag `v*` → build `ClearMMR.app` universal, tạo GitHub Release kèm zip+dmg
+  và `--generate-notes` (tự lấy commit message làm release notes).
+- Version trong `Info.plist` lấy từ tên tag (bỏ chữ `v`), fallback `1.0`.
+- `workflow_dispatch` → chỉ build + upload artifact, không tạo release.
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0   # phát hành release
