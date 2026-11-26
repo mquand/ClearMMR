@@ -1,0 +1,24 @@
+/* ClearMMR English localization.
+   Keys are the Vietnamese source strings; missing keys fall back to the key itself. */
+
+"Bộ nhớ đang dùng" = "Memory in Use";
+"Đang tải…" = "Loading…";
+"Top ứng dụng dùng RAM" = "Top RAM Consumers";
+"Giải phóng RAM" = "Free Up RAM";
+"Đang giải phóng…" = "Freeing Up…";
+"Khởi động cùng macOS" = "Launch at Login";
+"Thoát ClearMMR" = "Quit ClearMMR";
+"Ổ đĩa trống" = "Disk Free";
+"Uptime" = "Uptime";
+"Active" = "Active";
+"Wired" = "Wired";
+"Compressed" = "Compressed";
+"Force Quit %@" = "Force Quit %@";
+
+"Đã hủy giải phóng RAM." = "RAM purge cancelled.";
+"Giải phóng RAM thất bại: %@" = "RAM purge failed: %@";
+"Đã giải phóng RAM. Hiện còn %lld%%." = "RAM freed. Now at %lld%%.";
+
+"%lldg %lldp" = "%lldh %lldm";
+"%lldp" = "%lldm";
+"%llds" = "%llds";

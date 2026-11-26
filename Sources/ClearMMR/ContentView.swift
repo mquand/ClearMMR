@@ -66,7 +66,7 @@ struct ContentView: View {
         }
     }
 
-    private func statBox(title: String, value: String) -> some View {
+    private func statBox(title: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption)
@@ -83,9 +83,13 @@ struct ContentView: View {
         let uptime = ProcessInfo.processInfo.systemUptime
         let hours = Int(uptime) / 3600
         let minutes = (Int(uptime) % 3600) / 60
-        if hours > 0 { return "\(hours)g \(minutes)p" }
-        if minutes > 0 { return "\(minutes)p" }
-        return "\(Int(uptime))s"
+        if hours > 0 {
+            return String(format: NSLocalizedString("%lldg %lldp", comment: "Uptime: hours and minutes"), hours, minutes)
+        }
+        if minutes > 0 {
+            return String(format: NSLocalizedString("%lldp", comment: "Uptime: minutes"), minutes)
+        }
+        return String(format: NSLocalizedString("%llds", comment: "Uptime: seconds"), Int(uptime))
     }
 
     // MARK: - Breakdown
@@ -98,7 +102,7 @@ struct ContentView: View {
         }
     }
 
-    private func statRow(_ title: String, _ bytes: UInt64) -> some View {
+    private func statRow(_ title: LocalizedStringKey, _ bytes: UInt64) -> some View {
         HStack {
             Text(title)
                 .foregroundStyle(.secondary)

@@ -31,6 +31,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/ClearMMR" "$APP/Contents/MacOS/ClearMMR"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+if ls Resources/*.lproj >/dev/null 2>&1; then
+    cp -R Resources/*.lproj "$APP/Contents/Resources/"
+fi
 chmod +x "$APP/Contents/MacOS/ClearMMR"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -54,6 +57,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>${VERSION}</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>vi</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>

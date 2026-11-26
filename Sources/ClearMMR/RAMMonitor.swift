@@ -188,15 +188,20 @@ final class RAMMonitor: ObservableObject {
 
         if let error {
             let cancelled = (error["NSAppleScriptErrorNumber"] as? Int) == 128
-            notify(
-                title: "ClearMMR",
-                body: cancelled ? "Đã hủy giải phóng RAM." : "Giải phóng RAM thất bại: \(error["NSAppleScriptErrorMessage"] ?? "unknown")"
-            )
+            if cancelled {
+                notify(title: "ClearMMR", body: NSLocalizedString("Đã hủy giải phóng RAM.", comment: ""))
+            } else {
+                let detail = error["NSAppleScriptErrorMessage"] as? String ?? "unknown"
+                notify(title: "ClearMMR", body: String(
+                    format: NSLocalizedString("Giải phóng RAM thất bại: %@", comment: ""),
+                    detail
+                ))
+            }
         } else {
-            notify(
-                title: "ClearMMR",
-                body: "Đã giải phóng RAM. Hiện còn \(Int(percent.rounded()))%."
-            )
+            notify(title: "ClearMMR", body: String(
+                format: NSLocalizedString("Đã giải phóng RAM. Hiện còn %lld%%.", comment: ""),
+                Int(percent.rounded())
+            ))
         }
     }
 
