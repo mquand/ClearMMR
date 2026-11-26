@@ -22,11 +22,12 @@ struct RAMMenuLabel: View {
 
     var body: some View {
         Label {
-            Text("RAM \(Int(percent.rounded()))%")
+            Text("\(Int(percent.rounded()))%")
                 .monospacedDigit()
         } icon: {
             Image(systemName: "memorychip")
         }
+        .labelStyle(.titleAndIcon)
         .foregroundStyle(color)
     }
 
