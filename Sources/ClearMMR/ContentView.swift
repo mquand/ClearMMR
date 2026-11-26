@@ -4,7 +4,9 @@ import AppKit
 struct ContentView: View {
     @EnvironmentObject private var monitor: RAMMonitor
     @EnvironmentObject private var updater: AppUpdater
+    @EnvironmentObject private var cleaner: DiskCleaner
     @State private var showUpdateAlert = false
+    @State private var showCleanAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -27,11 +29,23 @@ struct ContentView: View {
         .onChange(of: updater.state) { newState in
             if case .available = newState { showUpdateAlert = true }
         }
+        .onChange(of: cleaner.lastFreed) { freed in
+            if freed != nil { monitor.refresh() }
+        }
         .alert("Có bản cập nhật mới", isPresented: $showUpdateAlert) {
             Button("Cập nhật") { updater.install() }
             Button("Để sau", role: .cancel) { updater.dismiss() }
         } message: {
             Text("Phiên bản \(updater.latestTag) đã sẵn sàng. App sẽ tự tải, cài đặt và khởi động lại.")
+        }
+        .alert("Dọn ổ đĩa?", isPresented: $showCleanAlert) {
+            Button("Dọn ngay", role: .destructive) {
+                Task { await cleaner.clean() }
+            }
+            Button("Hủy", role: .cancel) {}
+        } message: {
+            Text(cleaner.items.map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
+                .joined(separator: "\n"))
         }
     }
 
@@ -189,6 +203,32 @@ struct ContentView: View {
             }
             .disabled(monitor.isPurging)
             .frame(maxWidth: .infinity)
+
+            Button {
+                Task {
+                    await cleaner.scan()
+                    if !cleaner.items.isEmpty { showCleanAlert = true }
+                }
+            } label: {
+                switch cleaner.state {
+                case .scanning: Label("Đang quét…", systemImage: "internaldrive")
+                case .cleaning: Label("Đang dọn…", systemImage: "internaldrive")
+                default: Label("Dọn ổ đĩa", systemImage: "internaldrive")
+                }
+            }
+            .disabled(cleaner.state != .idle)
+            .frame(maxWidth: .infinity)
+
+            if let message = cleaner.message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let freed = cleaner.lastFreed {
+                Text("Đã giải phóng \(formatGB(freed))")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.green)
+            }
 
             Toggle("Khởi động cùng macOS", isOn: Binding(
                 get: { monitor.loginItemEnabled },

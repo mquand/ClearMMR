@@ -35,3 +35,18 @@
 "Hãy copy app vào Applications rồi thử lại." = "Please copy the app into Applications and try again.";
 "Không có quyền ghi vào thư mục chứa app." = "No write permission for the app's folder.";
 "File tải về sai checksum, đã hủy cập nhật." = "Downloaded file failed checksum verification, update cancelled.";
+
+"Dọn ổ đĩa" = "Clean Disk";
+"Đang quét…" = "Scanning…";
+"Đang dọn…" = "Cleaning…";
+"Dọn ổ đĩa?" = "Clean Up Disk?";
+"Dọn ngay" = "Clean Now";
+"Hủy" = "Cancel";
+"Bộ nhớ đệm ứng dụng (Caches)" = "App caches";
+"Tệp log (Logs)" = "Log files";
+"Thùng rác" = "Trash";
+"Xcode DerivedData" = "Xcode DerivedData";
+"iOS DeviceSupport" = "iOS DeviceSupport";
+"CoreSimulator Caches" = "CoreSimulator caches";
+"Không tìm thấy mục nào để dọn." = "Nothing to clean.";
+"Đã giải phóng %@ GB trên ổ đĩa." = "Freed %@ GB on disk.";

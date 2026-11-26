@@ -23,6 +23,7 @@
 | **Chỉ số hệ thống** | CPU %, Swap, dung lượng ổ đĩa trống, Uptime |
 | **Top 5 process** | Theo RAM resident + cột CPU %, nút **Force Quit** từng app |
 | **Giải phóng RAM** | Chạy `/usr/sbin/purge` qua `NSAppleScript` (quyền admin), thông báo macOS sau khi xong |
+| **Dọn ổ đĩa** | Quét Caches/Logs/Trash/Xcode caches, hiện dung lượng từng mục, xác nhận rồi xóa |
 | **Login item** | `SMAppService` — khởi động cùng macOS |
 | **Tự cập nhật** | Check GitHub Releases, tải zip, verify SHA-256, tự thay `.app` + relaunch |
 | **Đa ngôn ngữ** | Tiếng Việt (mặc định) + English, tự theo ngôn ngữ hệ thống |
@@ -72,6 +73,7 @@ Popover  :  ┌─────────────────────�
 | Thông báo | `UNUserNotificationCenter` |
 | Đa ngôn ngữ | `Localizable.strings` trong `*.lproj` |
 | Tự cập nhật | GitHub Releases API + `URLSession` + `CryptoKit` (SHA-256) |
+| Dọn ổ đĩa | `du -sk` đo dung lượng + `FileManager.removeItem` |
 
 ## Build từ source (không cần Xcode)
 
@@ -119,6 +121,7 @@ Sources/ClearMMR/
   RAMMonitor.swift     # logic: host_statistics, libproc, purge, login item
   ContentView.swift    # UI popover SwiftUI
   Updater.swift        # tự cập nhật qua GitHub Releases
+  DiskCleaner.swift    # quét & dọn Caches/Logs/Trash/Xcode caches
 Resources/
   AppIcon.icns         # icon app (tạo bởi scripts/make-icon.py)
   en.lproj/            # bản dịch English (key = tiếng Việt)
