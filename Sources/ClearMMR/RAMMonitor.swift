@@ -179,7 +179,7 @@ final class RAMMonitor: ObservableObject {
         await requestNotificationAuthorization()
 
         var error: NSDictionary?
-        NSAppleScript(source: #"do shell script "/usr/bin/purge" with administrator privileges"#)?
+        NSAppleScript(source: #"do shell script "/usr/sbin/purge" with administrator privileges"#)?
             .executeAndReturnError(&error)
 
         // purge cần vài giây để giải phóng file cache
