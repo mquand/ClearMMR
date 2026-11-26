@@ -38,6 +38,8 @@ final class DiskCleaner: ObservableObject {
     @Published private(set) var items: [CleanupItem] = []
     @Published private(set) var lastFreed: UInt64?
     @Published private(set) var message: String?
+    @Published private(set) var adminBytes: UInt64 = 0
+    @Published private(set) var isAdminCleaning = false
 
     private var home: URL { FileManager.default.homeDirectoryForCurrentUser }
 
@@ -106,6 +108,37 @@ final class DiskCleaner: ObservableObject {
         notifyFreed(freed)
     }
 
+    // MARK: - Deep clean (admin)
+
+    /// Đường dẫn cấp hệ thống dọn được an toàn: cache & log sẽ tự tái tạo.
+    private var adminTargets: [String] {
+        ["/Library/Caches", "/Library/Logs"]
+    }
+
+    func scanAdmin() async {
+        let paths = adminTargets
+        adminBytes = await Task.detached(priority: .utility) {
+            paths.reduce(0) { $0 + diskUsageBytes(URL(fileURLWithPath: $1)) }
+        }.value
+    }
+
+    /// Xóa cache/log cấp hệ thống qua NSAppleScript admin privileges.
+    func cleanAdmin() async {
+        isAdminCleaning = true
+        defer { isAdminCleaning = false }
+        let paths = adminTargets.map { "'\($0)/'*" }.joined(separator: " ")
+        let source = #"do shell script "rm -rf \#(paths) 2>/dev/null" with administrator privileges"#
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if error == nil {
+            notifyFreed(adminBytes)
+            adminBytes = 0
+        } else if let nsError = error,
+                  let detail = nsError["NSAppleScriptErrorMessage"] as? String {
+            message = detail
+        }
+    }
+
     private func notifyFreed(_ bytes: UInt64) {
         let gb = String(format: "%.1f", Double(bytes) / Double(1 << 30))
         let body = String(
@@ -119,7 +152,7 @@ final class DiskCleaner: ObservableObject {
             content.title = "ClearMMR"
             content.body = body
             content.sound = .default
-            center.add(UNNotificationRequest(
+            try? await center.add(UNNotificationRequest(
                 identifier: UUID().uuidString, content: content, trigger: nil
             ))
         }

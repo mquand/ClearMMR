@@ -50,3 +50,11 @@
 "CoreSimulator Caches" = "CoreSimulator caches";
 "Không tìm thấy mục nào để dọn." = "Nothing to clean.";
 "Đã giải phóng %@ GB trên ổ đĩa." = "Freed %@ GB on disk.";
+
+"Dọn hệ thống (Admin)" = "Clean System (Admin)";
+"Đang dọn hệ thống…" = "Cleaning system…";
+"Dọn sâu (Admin)?" = "Deep Clean (Admin)?";
+"Xóa cache & log cấp hệ thống (khoảng %@). Cần mật khẩu admin." = "Delete system-level caches & logs (~%@). Admin password required.";
+"Gỡ cài đặt" = "Uninstall";
+"Gỡ cài đặt ClearMMR?" = "Uninstall ClearMMR?";
+"App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay." = "The app will be moved to Trash, removed from login items and quit.";

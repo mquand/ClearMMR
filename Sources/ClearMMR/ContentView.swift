@@ -7,6 +7,8 @@ struct ContentView: View {
     @EnvironmentObject private var cleaner: DiskCleaner
     @State private var showUpdateAlert = false
     @State private var showCleanAlert = false
+    @State private var showAdminAlert = false
+    @State private var showUninstallAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -46,6 +48,20 @@ struct ContentView: View {
         } message: {
             Text(cleaner.items.map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
                 .joined(separator: "\n"))
+        }
+        .alert("Dọn sâu (Admin)?", isPresented: $showAdminAlert) {
+            Button("Dọn ngay", role: .destructive) {
+                Task { await cleaner.cleanAdmin() }
+            }
+            Button("Hủy", role: .cancel) {}
+        } message: {
+            Text("Xóa cache & log cấp hệ thống (khoảng \(formatGB(cleaner.adminBytes))). Cần mật khẩu admin.")
+        }
+        .alert("Gỡ cài đặt ClearMMR?", isPresented: $showUninstallAlert) {
+            Button("Gỡ cài đặt", role: .destructive) { uninstall() }
+            Button("Hủy", role: .cancel) {}
+        } message: {
+            Text("App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay.")
         }
     }
 
@@ -230,6 +246,22 @@ struct ContentView: View {
                     .foregroundStyle(.green)
             }
 
+            Button {
+                Task {
+                    await cleaner.scanAdmin()
+                    if cleaner.adminBytes > 0 { showAdminAlert = true }
+                }
+            } label: {
+                if cleaner.isAdminCleaning {
+                    Label("Đang dọn hệ thống…", systemImage: "internaldrive")
+                } else {
+                    Label("Dọn hệ thống (Admin)", systemImage: "internaldrive.badge.plus")
+                }
+            }
+            .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
+            .font(.caption)
+            .frame(maxWidth: .infinity)
+
             Toggle("Khởi động cùng macOS", isOn: Binding(
                 get: { monitor.loginItemEnabled },
                 set: { monitor.setLoginItem($0) }
@@ -255,8 +287,29 @@ struct ContentView: View {
                 NSApp.terminate(nil)
             }
             .frame(maxWidth: .infinity)
+
+            Button("Gỡ cài đặt", role: .destructive) {
+                showUninstallAlert = true
+            }
+            .font(.caption)
+            .frame(maxWidth: .infinity)
         }
         .font(.callout)
+    }
+
+    private func uninstall() {
+        monitor.setLoginItem(false)
+        let bundle = Bundle.main.bundleURL
+        do {
+            try FileManager.default.trashItem(at: bundle, resultingItemURL: nil)
+        } catch {
+            try? FileManager.default.moveItem(
+                at: bundle,
+                to: FileManager.default.temporaryDirectory
+                    .appendingPathComponent("ClearMMR.app")
+            )
+        }
+        NSApp.terminate(nil)
     }
 
     private var updateButtonTitle: LocalizedStringKey {
