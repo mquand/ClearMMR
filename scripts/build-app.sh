@@ -28,8 +28,9 @@ lipo -create "$BIN_DIR/ClearMMR-arm64" "$BIN_DIR/ClearMMR-x86_64" \
 
 echo "==> Tạo bundle $APP"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/ClearMMR" "$APP/Contents/MacOS/ClearMMR"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 chmod +x "$APP/Contents/MacOS/ClearMMR"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -45,6 +46,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>com.clearmmr.app</string>
     <key>CFBundleExecutable</key>
     <string>ClearMMR</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
