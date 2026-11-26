@@ -24,6 +24,7 @@
 | **Top 5 process** | Theo RAM resident + cột CPU %, nút **Force Quit** từng app |
 | **Giải phóng RAM** | Chạy `/usr/sbin/purge` qua `NSAppleScript` (quyền admin), thông báo macOS sau khi xong |
 | **Login item** | `SMAppService` — khởi động cùng macOS |
+| **Tự cập nhật** | Check GitHub Releases, tải zip, verify SHA-256, tự thay `.app` + relaunch |
 | **Đa ngôn ngữ** | Tiếng Việt (mặc định) + English, tự theo ngôn ngữ hệ thống |
 | **Nhẹ** | Cập nhật 2.5s/lần bằng `Task.sleep`, không Timer, CPU ~0% khi idle |
 
@@ -70,6 +71,7 @@ Popover  :  ┌─────────────────────�
 | Login item | `SMAppService.mainApp` |
 | Thông báo | `UNUserNotificationCenter` |
 | Đa ngôn ngữ | `Localizable.strings` trong `*.lproj` |
+| Tự cập nhật | GitHub Releases API + `URLSession` + `CryptoKit` (SHA-256) |
 
 ## Build từ source (không cần Xcode)
 
@@ -116,6 +118,7 @@ Sources/ClearMMR/
   ClearMMRApp.swift    # @main + MenuBarExtra + RAMGlyph icon
   RAMMonitor.swift     # logic: host_statistics, libproc, purge, login item
   ContentView.swift    # UI popover SwiftUI
+  Updater.swift        # tự cập nhật qua GitHub Releases
 Resources/
   AppIcon.icns         # icon app (tạo bởi scripts/make-icon.py)
   en.lproj/            # bản dịch English (key = tiếng Việt)

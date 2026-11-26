@@ -3,6 +3,8 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject private var monitor: RAMMonitor
+    @EnvironmentObject private var updater: AppUpdater
+    @State private var showUpdateAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -18,7 +20,19 @@ struct ContentView: View {
         }
         .padding(16)
         .frame(width: 320)
-        .onAppear { monitor.refreshLoginItemStatus() }
+        .onAppear {
+            monitor.refreshLoginItemStatus()
+            updater.checkIfNeeded()
+        }
+        .onChange(of: updater.state) { newState in
+            if case .available = newState { showUpdateAlert = true }
+        }
+        .alert("Có bản cập nhật mới", isPresented: $showUpdateAlert) {
+            Button("Cập nhật") { updater.install() }
+            Button("Để sau", role: .cancel) { updater.dismiss() }
+        } message: {
+            Text("Phiên bản \(updater.latestTag) đã sẵn sàng. App sẽ tự tải, cài đặt và khởi động lại.")
+        }
     }
 
     // MARK: - Header
@@ -181,12 +195,37 @@ struct ContentView: View {
                 set: { monitor.setLoginItem($0) }
             ))
 
+            HStack {
+                Button {
+                    updater.check()
+                } label: {
+                    Label(updateButtonTitle, systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(updater.state == .checking || updater.state == .downloading)
+
+                if case .failed(let message) = updater.state {
+                    Text("Lỗi: \(message)")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .lineLimit(2)
+                }
+            }
+
             Button("Thoát ClearMMR") {
                 NSApp.terminate(nil)
             }
             .frame(maxWidth: .infinity)
         }
         .font(.callout)
+    }
+
+    private var updateButtonTitle: LocalizedStringKey {
+        switch updater.state {
+        case .checking: return "Đang kiểm tra…"
+        case .downloading: return "Đang cập nhật…"
+        case .available(let tag): return "Cập nhật lên \(tag)"
+        default: return "Kiểm tra cập nhật"
+        }
     }
 
     // MARK: - Helpers

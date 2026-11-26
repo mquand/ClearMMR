@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct ClearMMRApp: App {
     @StateObject private var monitor = RAMMonitor()
+    @StateObject private var updater = AppUpdater()
 
     var body: some Scene {
         MenuBarExtra {
             ContentView()
                 .environmentObject(monitor)
+                .environmentObject(updater)
         } label: {
             RAMMenuLabel(percent: monitor.percent)
         }

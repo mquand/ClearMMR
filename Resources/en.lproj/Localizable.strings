@@ -22,3 +22,16 @@
 "%lldg %lldp" = "%lldh %lldm";
 "%lldp" = "%lldm";
 "%llds" = "%llds";
+
+"Có bản cập nhật mới" = "Update Available";
+"Cập nhật" = "Update";
+"Để sau" = "Later";
+"Phiên bản %@ đã sẵn sàng. App sẽ tự tải, cài đặt và khởi động lại." = "Version %@ is ready. The app will download, install and relaunch automatically.";
+"Kiểm tra cập nhật" = "Check for Updates";
+"Đang kiểm tra…" = "Checking…";
+"Đang cập nhật…" = "Updating…";
+"Cập nhật lên %@" = "Update to %@";
+"Lỗi: %@" = "Error: %@";
+"Hãy copy app vào Applications rồi thử lại." = "Please copy the app into Applications and try again.";
+"Không có quyền ghi vào thư mục chứa app." = "No write permission for the app's folder.";
+"File tải về sai checksum, đã hủy cập nhật." = "Downloaded file failed checksum verification, update cancelled.";
