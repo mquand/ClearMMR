@@ -8,6 +8,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             Divider()
+            systemStats
+            Divider()
             memoryBreakdown
             Divider()
             topProcesses
@@ -50,6 +52,42 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - System stats
+
+    private var systemStats: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible()), GridItem(.flexible())],
+            spacing: 10
+        ) {
+            statBox(title: "CPU", value: String(format: "%.0f%%", monitor.cpuPercent))
+            statBox(title: "Swap", value: "\(formatGB(monitor.swapUsedBytes)) / \(formatGB(monitor.swapTotalBytes))")
+            statBox(title: "Ổ đĩa trống", value: formatGB(monitor.diskFreeBytes))
+            statBox(title: "Uptime", value: uptimeString)
+        }
+    }
+
+    private func statBox(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.callout.monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var uptimeString: String {
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let hours = Int(uptime) / 3600
+        let minutes = (Int(uptime) % 3600) / 60
+        if hours > 0 { return "\(hours)g \(minutes)p" }
+        if minutes > 0 { return "\(minutes)p" }
+        return "\(Int(uptime))s"
+    }
+
     // MARK: - Breakdown
 
     private var memoryBreakdown: some View {
@@ -90,9 +128,16 @@ struct ContentView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Spacer(minLength: 4)
+                        if process.cpuPercent > 0.5 {
+                            Text(String(format: "%.0f%%", process.cpuPercent))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 34, alignment: .trailing)
+                        }
                         Text(formatGB(process.residentBytes))
                             .font(.callout.monospacedDigit())
                             .foregroundStyle(.secondary)
+                            .frame(width: 64, alignment: .trailing)
                         Button {
                             monitor.forceQuit(process)
                         } label: {

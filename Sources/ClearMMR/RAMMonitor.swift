@@ -8,6 +8,7 @@ struct ProcessMemory: Identifiable, Hashable {
     let pid: pid_t
     let name: String
     let residentBytes: UInt64
+    var cpuPercent: Double = 0
 
     var id: pid_t { pid }
 }
@@ -19,12 +20,19 @@ final class RAMMonitor: ObservableObject {
     @Published private(set) var activeBytes: UInt64 = 0
     @Published private(set) var wiredBytes: UInt64 = 0
     @Published private(set) var compressedBytes: UInt64 = 0
+    @Published private(set) var cpuPercent: Double = 0
+    @Published private(set) var swapUsedBytes: UInt64 = 0
+    @Published private(set) var swapTotalBytes: UInt64 = 0
+    @Published private(set) var diskFreeBytes: UInt64 = 0
+    @Published private(set) var diskTotalBytes: UInt64 = 0
     @Published private(set) var processes: [ProcessMemory] = []
     @Published private(set) var isPurging = false
     @Published private(set) var loginItemEnabled = false
 
     private let pageSize: UInt64
     private var monitorTask: Task<Void, Never>?
+    private var lastCPUInfo: host_cpu_load_info?
+    private var procLastSample: [pid_t: (cpuTime: UInt64, uptime: TimeInterval)] = [:]
 
     var percent: Double {
         guard totalBytes > 0 else { return 0 }
@@ -59,6 +67,15 @@ final class RAMMonitor: ObservableObject {
         activeBytes = stats.active
         wiredBytes = stats.wired
         compressedBytes = stats.compressed
+        cpuPercent = readCPUUsage() ?? cpuPercent
+        if let swap = readSwapUsage() {
+            swapUsedBytes = swap.used
+            swapTotalBytes = swap.total
+        }
+        if let disk = readDiskSpace() {
+            diskFreeBytes = disk.free
+            diskTotalBytes = disk.total
+        }
         processes = topProcesses(limit: 5)
     }
 
@@ -94,6 +111,8 @@ final class RAMMonitor: ObservableObject {
         var result: [ProcessMemory] = []
         result.reserveCapacity(limit * 4)
         let ownPid = getpid()
+        let nowUptime = ProcessInfo.processInfo.systemUptime
+        var seenPids = Set<pid_t>()
 
         for pid in pids.prefix(Int(size)) where pid > 1 && pid != ownPid {
             var taskInfo = proc_taskinfo()
@@ -105,14 +124,29 @@ final class RAMMonitor: ObservableObject {
             _ = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsdInfo, bsdSize)
 
             let name = Self.processName(from: &bsdInfo) ?? "pid \(pid)"
+            let cpuTime = taskInfo.total_user &+ taskInfo.total_system
+            let cpuPercent = processCPUPercent(pid: pid, cpuTime: cpuTime, uptime: nowUptime)
+            seenPids.insert(pid)
             result.append(ProcessMemory(
                 pid: pid,
                 name: name,
-                residentBytes: UInt64(taskInfo.resident_size)
+                residentBytes: UInt64(taskInfo.resident_size),
+                cpuPercent: cpuPercent
             ))
         }
 
+        procLastSample = procLastSample.filter { seenPids.contains($0.key) }
         return Array(result.sorted { $0.residentBytes > $1.residentBytes }.prefix(limit))
+    }
+
+    // total_user/total_system của proc_taskinfo tính bằng nanosecond
+    private func processCPUPercent(pid: pid_t, cpuTime: UInt64, uptime: TimeInterval) -> Double {
+        defer { procLastSample[pid] = (cpuTime, uptime) }
+        guard let prev = procLastSample[pid], uptime > prev.uptime else { return 0 }
+        let deltaProc = Double(cpuTime &- prev.cpuTime) / 1_000_000_000
+        let deltaWall = uptime - prev.uptime
+        guard deltaWall > 0 else { return 0 }
+        return min(deltaProc / deltaWall * 100, 100 * Double(ProcessInfo.processInfo.activeProcessorCount))
     }
 
     private static func processName(from info: inout proc_bsdinfo) -> String? {
@@ -205,6 +239,58 @@ final class RAMMonitor: ObservableObject {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    // MARK: - CPU / Swap / Disk
+
+    private func readCPUUsage() -> Double? {
+        var info = host_cpu_load_info()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<host_cpu_load_info>.stride / MemoryLayout<integer_t>.stride
+        )
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return nil }
+
+        defer { lastCPUInfo = info }
+        guard let prev = lastCPUInfo else { return nil }
+
+        let user = Int64(info.cpu_ticks.0) &- Int64(prev.cpu_ticks.0)
+        let system = Int64(info.cpu_ticks.1) &- Int64(prev.cpu_ticks.1)
+        let idle = Int64(info.cpu_ticks.2) &- Int64(prev.cpu_ticks.2)
+        let nice = Int64(info.cpu_ticks.3) &- Int64(prev.cpu_ticks.3)
+        let total = user &+ system &+ idle &+ nice
+        guard total > 0 else { return nil }
+        return Double(user &+ system &+ nice) / Double(total) * 100
+    }
+
+    // Layout giống struct xsw_usage trong <sys/sysctl.h> (đã verify: total/avail/used tính bằng bytes)
+    private struct SwapUsage {
+        var xsu_total: UInt64
+        var xsu_avail: UInt64
+        var xsu_used: UInt64
+        var xsu_pagesize: UInt32
+        var xsu_encrypted: Int32
+    }
+
+    private func readSwapUsage() -> (used: UInt64, total: UInt64)? {
+        var usage = SwapUsage()
+        var size = MemoryLayout<SwapUsage>.stride
+        let result = sysctlbyname("vm.swapusage", &usage, &size, nil, 0)
+        guard result == 0, usage.xsu_total > 0 else { return nil }
+        return (usage.xsu_used, usage.xsu_total)
+    }
+
+    private func readDiskSpace() -> (free: UInt64, total: UInt64)? {
+        guard let attrs = try? FileManager.default.attributesOfFileSystem(forPath: "/") else {
+            return nil
+        }
+        guard let free = attrs[.systemFreeSize] as? NSNumber,
+              let total = attrs[.systemSize] as? NSNumber else { return nil }
+        return (free.uint64Value, total.uint64Value)
     }
 
     // MARK: - Sysctl helpers
