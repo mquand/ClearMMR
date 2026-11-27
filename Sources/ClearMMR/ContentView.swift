@@ -8,6 +8,7 @@ struct ContentView: View {
     @AppStorage("warnThreshold") private var warnThreshold = 80
     @AppStorage("critThreshold") private var critThreshold = 90
     @AppStorage("appLanguage") private var appLanguage = "system"
+    @AppStorage("menuBarFormat") private var menuBarFormat = "percent"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -67,6 +68,10 @@ struct ContentView: View {
                     .foregroundStyle(headerColor)
                 ProgressView(value: min(monitor.percent / 100, 1))
                     .tint(headerColor)
+            }
+            if monitor.ramHistory.count > 1 {
+                SparklineView(values: monitor.ramHistory, color: headerColor)
+                    .frame(height: 18)
             }
         }
     }
@@ -303,6 +308,12 @@ struct ContentView: View {
                     applyLanguage(newValue)
                 }
 
+                Picker("Hiển thị Menu Bar", selection: $menuBarFormat) {
+                    Text("Phần trăm (%)").tag("percent")
+                    Text("Dung lượng (GB)").tag("gb")
+                    Text("RAM % · CPU %").tag("ram_cpu")
+                }
+
                 Divider()
 
                 Button {
@@ -450,6 +461,31 @@ enum AppAlert {
             onConfirm()
         } else {
             onCancel?()
+        }
+    }
+}
+
+struct SparklineView: View {
+    let values: [Double]
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let maxVal = max(values.max() ?? 100, 1)
+            let minVal = min(values.min() ?? 0, maxVal - 1)
+            let span = max(maxVal - minVal, 1)
+            Path { path in
+                for (idx, val) in values.enumerated() {
+                    let x = geo.size.width * CGFloat(idx) / CGFloat(max(values.count - 1, 1))
+                    let y = geo.size.height * (1 - CGFloat((val - minVal) / span))
+                    if idx == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(color.opacity(0.8), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
         }
     }
 }

@@ -29,6 +29,7 @@ final class RAMMonitor: ObservableObject {
     @Published private(set) var isPurging = false
     @Published private(set) var loginItemEnabled = false
     @Published private(set) var pressureLevel: Int32 = 1
+    @Published private(set) var ramHistory: [Double] = []
 
     private let pageSize: UInt64
     private var monitorTask: Task<Void, Never>?
@@ -87,6 +88,10 @@ final class RAMMonitor: ObservableObject {
             diskTotalBytes = disk.total
         }
         pressureLevel = readMemoryPressure() ?? pressureLevel
+        ramHistory.append(percent)
+        if ramHistory.count > 24 {
+            ramHistory.removeFirst(ramHistory.count - 24)
+        }
         if pressureLevel >= 4 {
             notifyCriticalPressureIfNeeded()
         }

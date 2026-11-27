@@ -45,6 +45,7 @@ final class DiskCleaner: ObservableObject {
     @Published private(set) var message: String?
     @Published private(set) var adminBytes: UInt64 = 0
     @Published private(set) var isAdminCleaning = false
+    @Published private(set) var totalFreedBytes: UInt64 = UInt64(UserDefaults.standard.integer(forKey: "totalFreedBytes"))
 
     private var home: URL { FileManager.default.homeDirectoryForCurrentUser }
 
@@ -58,6 +59,10 @@ final class DiskCleaner: ObservableObject {
             CleanupItem(titleKey: "CoreSimulator Caches", url: home.appendingPathComponent("Library/Developer/CoreSimulator/Caches"), deleteContentsOnly: true),
             CleanupItem(titleKey: "npm Cache", url: home.appendingPathComponent(".npm/_cacache"), deleteContentsOnly: true),
             CleanupItem(titleKey: "User Cache (~/.cache)", url: home.appendingPathComponent(".cache"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "Homebrew Cache", url: home.appendingPathComponent("Library/Caches/Homebrew"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "CocoaPods Cache", url: home.appendingPathComponent("Library/Caches/CocoaPods"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "Gradle Cache", url: home.appendingPathComponent(".gradle/caches"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "Xcode Archives", url: home.appendingPathComponent("Library/Developer/Xcode/Archives"), deleteContentsOnly: false),
         ]
     }
 
@@ -111,6 +116,10 @@ final class DiskCleaner: ObservableObject {
             return total
         }.value
         lastFreed = freed
+        if freed > 0 {
+            totalFreedBytes += freed
+            UserDefaults.standard.set(Int(min(totalFreedBytes, UInt64(Int.max))), forKey: "totalFreedBytes")
+        }
         state = .idle
         notifyFreed(freed)
     }
