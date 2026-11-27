@@ -34,6 +34,8 @@ final class RAMMonitor: ObservableObject {
     private var monitorTask: Task<Void, Never>?
     private var lastCPUInfo: host_cpu_load_info?
     private var procLastSample: [pid_t: (cpuTime: UInt64, uptime: TimeInterval)] = [:]
+    private var isPopoverOpen = false
+    private var lastHighRamAlert: Date?
 
     var percent: Double {
         guard totalBytes > 0 else { return 0 }
@@ -62,6 +64,13 @@ final class RAMMonitor: ObservableObject {
         }
     }
 
+    func setPopoverOpen(_ open: Bool) {
+        isPopoverOpen = open
+        if open {
+            refresh()
+        }
+    }
+
     func refresh() {
         guard let stats = readHostStats() else { return }
         usedBytes = stats.used
@@ -78,7 +87,28 @@ final class RAMMonitor: ObservableObject {
             diskTotalBytes = disk.total
         }
         pressureLevel = readMemoryPressure() ?? pressureLevel
-        processes = topProcesses(limit: 5)
+        if pressureLevel >= 4 {
+            notifyCriticalPressureIfNeeded()
+        }
+        if isPopoverOpen {
+            processes = topProcesses(limit: 5)
+        }
+    }
+
+    private func notifyCriticalPressureIfNeeded() {
+        let now = Date()
+        if let last = lastHighRamAlert, now.timeIntervalSince(last) < 900 {
+            return
+        }
+        lastHighRamAlert = now
+        let content = UNMutableNotificationContent()
+        content.title = "ClearMMR"
+        content.body = String(
+            format: NSLocalizedString("Áp lực bộ nhớ ở mức cao (%d%%). Nhấn để dọn RAM nếu cần.", comment: ""),
+            Int(percent.rounded())
+        )
+        let req = UNNotificationRequest(identifier: "clearmmr-high-ram", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(req)
     }
 
     // MARK: - host_statistics64

@@ -15,17 +15,22 @@ struct CleanupItem: Identifiable, Sendable {
 }
 
 private func diskUsageBytes(_ url: URL) -> UInt64 {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/du")
-    process.arguments = ["-sk", url.path]
-    let pipe = Pipe()
-    process.standardOutput = pipe
-    process.standardError = FileHandle.nullDevice
-    guard (try? process.run()) != nil else { return 0 }
-    process.waitUntilExit()
-    let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    let kb = Int64(out.split(separator: "\t").first ?? "") ?? 0
-    return UInt64(max(0, kb)) * 1024
+    let fm = FileManager.default
+    let keys: Set<URLResourceKey> = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileSizeKey]
+    guard let enumerator = fm.enumerator(
+        at: url,
+        includingPropertiesForKeys: Array(keys),
+        options: [.skipsPackageDescendants]
+    ) else {
+        return 0
+    }
+    var total: UInt64 = 0
+    for case let fileURL as URL in enumerator {
+        guard let values = try? fileURL.resourceValues(forKeys: keys),
+              values.isRegularFile == true else { continue }
+        total += UInt64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+    }
+    return total
 }
 
 @MainActor
@@ -51,6 +56,8 @@ final class DiskCleaner: ObservableObject {
             CleanupItem(titleKey: "Xcode DerivedData", url: home.appendingPathComponent("Library/Developer/Xcode/DerivedData"), deleteContentsOnly: false),
             CleanupItem(titleKey: "iOS DeviceSupport", url: home.appendingPathComponent("Library/Developer/Xcode/iOS DeviceSupport"), deleteContentsOnly: false),
             CleanupItem(titleKey: "CoreSimulator Caches", url: home.appendingPathComponent("Library/Developer/CoreSimulator/Caches"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "npm Cache", url: home.appendingPathComponent(".npm/_cacache"), deleteContentsOnly: true),
+            CleanupItem(titleKey: "User Cache (~/.cache)", url: home.appendingPathComponent(".cache"), deleteContentsOnly: true),
         ]
     }
 

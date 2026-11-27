@@ -24,8 +24,12 @@ struct ContentView: View {
         .padding(16)
         .frame(width: 320)
         .onAppear {
+            monitor.setPopoverOpen(true)
             monitor.refreshLoginItemStatus()
             updater.checkIfNeeded()
+        }
+        .onDisappear {
+            monitor.setPopoverOpen(false)
         }
         .onChange(of: updater.state) { newState in
             if case .available(let tag) = newState {

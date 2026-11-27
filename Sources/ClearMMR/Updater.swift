@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import CryptoKit
+import UserNotifications
 
 // Tự cập nhật qua GitHub Releases của repo gốc.
 // Flow: check API -> so version -> tải zip -> verify sha256 -> giải nén
@@ -22,6 +23,23 @@ final class AppUpdater: ObservableObject {
     private let repo = "mquand/ClearMMR"
     private let lastCheckKey = "lastUpdateCheck"
     private let checkInterval: TimeInterval = 24 * 3600
+
+    init() {
+        Task.detached(priority: .utility) {
+            Self.cleanupOldBackups()
+        }
+        if let updatedVersion = UserDefaults.standard.string(forKey: "justUpdatedToVersion") {
+            UserDefaults.standard.removeObject(forKey: "justUpdatedToVersion")
+            let content = UNMutableNotificationContent()
+            content.title = "ClearMMR"
+            content.body = String(
+                format: NSLocalizedString("Đã cập nhật lên phiên bản %@.", comment: ""),
+                updatedVersion
+            )
+            let req = UNNotificationRequest(identifier: "clearmmr-updated", content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(req)
+        }
+    }
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
@@ -169,14 +187,24 @@ final class AppUpdater: ObservableObject {
         }
 
         // Relaunch app mới (-n: ép instance mới, tránh attach vào process cũ)
-        // rồi thoát bản cũ
+        // rồi thoát bản cũ. Bản mới sẽ tự dọn ClearMMR-old-*.app khi khởi động.
+        if !latestTag.isEmpty {
+            UserDefaults.standard.set(latestTag, forKey: "justUpdatedToVersion")
+        }
         _ = try? shellStatus("/usr/bin/open", ["-n", target.path])
         NSApp.terminate(nil)
+    }
 
-        // Dọn backup sau 10s (app cũ đã thoát, binary không còn lock)
-        Task.detached {
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
-            try? FileManager.default.removeItem(at: backup)
+    /// Dọn dẹp các bản backup `ClearMMR-old-*.app` còn sót lại từ các lần update trước.
+    nonisolated static func cleanupOldBackups() {
+        let fm = FileManager.default
+        let parentDir = Bundle.main.bundleURL.deletingLastPathComponent()
+        guard let items = try? fm.contentsOfDirectory(at: parentDir, includingPropertiesForKeys: nil) else { return }
+        for item in items {
+            let name = item.lastPathComponent
+            if name.hasPrefix("ClearMMR-old-") && name.hasSuffix(".app") {
+                try? fm.removeItem(at: item)
+            }
         }
     }
 
