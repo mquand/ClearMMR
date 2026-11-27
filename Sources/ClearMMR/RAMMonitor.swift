@@ -28,6 +28,7 @@ final class RAMMonitor: ObservableObject {
     @Published private(set) var processes: [ProcessMemory] = []
     @Published private(set) var isPurging = false
     @Published private(set) var loginItemEnabled = false
+    @Published private(set) var pressureLevel: Int32 = 1
 
     private let pageSize: UInt64
     private var monitorTask: Task<Void, Never>?
@@ -76,6 +77,7 @@ final class RAMMonitor: ObservableObject {
             diskFreeBytes = disk.free
             diskTotalBytes = disk.total
         }
+        pressureLevel = readMemoryPressure() ?? pressureLevel
         processes = topProcesses(limit: 5)
     }
 
@@ -287,6 +289,16 @@ final class RAMMonitor: ObservableObject {
         let result = sysctlbyname("vm.swapusage", &usage, &size, nil, 0)
         guard result == 0, usage.xsu_total > 0 else { return nil }
         return (usage.xsu_used, usage.xsu_total)
+    }
+
+    // kern.memorystatus_vm_pressure_level: 1 = normal, 2 = warn, 4 = critical
+    private func readMemoryPressure() -> Int32? {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.stride
+        guard sysctlbyname("kern.memorystatus_vm_pressure_level", &value, &size, nil, 0) == 0 else {
+            return nil
+        }
+        return value
     }
 
     private func readDiskSpace() -> (free: UInt64, total: UInt64)? {

@@ -60,3 +60,14 @@
 "Gỡ cài đặt" = "Uninstall";
 "Gỡ cài đặt ClearMMR?" = "Uninstall ClearMMR?";
 "App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay." = "The app will be moved to Trash, removed from login items and quit.";
+
+"Bình thường" = "Normal";
+"Cảnh báo" = "Warning";
+"Nghiêm trọng" = "Critical";
+"Ngưỡng" = "Thresholds";
+"Vàng %lld%%" = "Yellow %lld%%";
+"Đỏ %lld%%" = "Red %lld%%";
+"Ngôn ngữ" = "Language";
+"Theo hệ thống" = "System Default";
+"Đã đổi ngôn ngữ. Khởi động lại app để áp dụng?" = "Language changed. Restart the app to apply?";
+"Khởi động lại" = "Restart";

@@ -5,6 +5,9 @@ struct ContentView: View {
     @EnvironmentObject private var monitor: RAMMonitor
     @EnvironmentObject private var updater: AppUpdater
     @EnvironmentObject private var cleaner: DiskCleaner
+    @AppStorage("warnThreshold") private var warnThreshold = 80
+    @AppStorage("critThreshold") private var critThreshold = 90
+    @AppStorage("appLanguage") private var appLanguage = "system"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -66,8 +69,8 @@ struct ContentView: View {
 
     private var headerColor: Color {
         switch monitor.percent {
-        case 90...: return .red
-        case 80..<90: return .yellow
+        case Double(critThreshold)...: return .red
+        case Double(warnThreshold)..<Double(critThreshold): return .yellow
         default: return .accentColor
         }
     }
@@ -83,10 +86,11 @@ struct ContentView: View {
             statBox(title: "Swap", value: "\(formatGB(monitor.swapUsedBytes)) / \(formatGB(monitor.swapTotalBytes))")
             statBox(title: "Ổ đĩa trống", value: formatGB(monitor.diskFreeBytes))
             statBox(title: "Uptime", value: uptimeString)
+            statBox(title: "Bộ nhớ", value: pressureString, color: pressureColor)
         }
     }
 
-    private func statBox(title: LocalizedStringKey, value: String) -> some View {
+    private func statBox(title: LocalizedStringKey, value: String, color: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption)
@@ -95,8 +99,25 @@ struct ContentView: View {
                 .font(.callout.monospacedDigit())
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .foregroundStyle(color ?? .primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var pressureString: String {
+        switch monitor.pressureLevel {
+        case 4: return NSLocalizedString("Nghiêm trọng", comment: "Memory pressure: critical")
+        case 2: return NSLocalizedString("Cảnh báo", comment: "Memory pressure: warning")
+        default: return NSLocalizedString("Bình thường", comment: "Memory pressure: normal")
+        }
+    }
+
+    private var pressureColor: Color {
+        switch monitor.pressureLevel {
+        case 4: return .red
+        case 2: return .yellow
+        default: return .green
+        }
     }
 
     private var uptimeString: String {
@@ -253,6 +274,17 @@ struct ContentView: View {
 
                 Divider()
 
+                Picker("Ngôn ngữ", selection: $appLanguage) {
+                    Text("Theo hệ thống").tag("system")
+                    Text("Tiếng Việt").tag("vi")
+                    Text("English").tag("en")
+                }
+                .onChange(of: appLanguage) { newValue in
+                    applyLanguage(newValue)
+                }
+
+                Divider()
+
                 Button {
                     updater.check()
                 } label: {
@@ -296,6 +328,19 @@ struct ContentView: View {
                     .foregroundStyle(.red)
                     .lineLimit(2)
             }
+
+            HStack(spacing: 12) {
+                Text("Ngưỡng")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Stepper("Vàng \(warnThreshold)%", value: $warnThreshold, in: 50...95)
+                    .font(.caption)
+                Stepper("Đỏ \(critThreshold)%", value: $critThreshold, in: 60...99)
+                    .font(.caption)
+            }
+            .onChange(of: warnThreshold) { _ in
+                if critThreshold <= warnThreshold { critThreshold = min(warnThreshold + 5, 99) }
+            }
         }
         .font(.callout)
     }
@@ -307,6 +352,30 @@ struct ContentView: View {
         case .available(let tag): return Text("Cập nhật lên \(tag)")
         default: return Text("Kiểm tra cập nhật")
         }
+    }
+
+    private func applyLanguage(_ code: String) {
+        let defaults = UserDefaults.standard
+        if code == "system" {
+            defaults.removeObject(forKey: "AppleLanguages")
+        } else {
+            defaults.set([code], forKey: "AppleLanguages")
+        }
+        AppAlert.show(
+            title: "Ngôn ngữ",
+            message: NSLocalizedString("Đã đổi ngôn ngữ. Khởi động lại app để áp dụng?", comment: ""),
+            confirmTitle: "Khởi động lại",
+            cancelTitle: "Để sau",
+            onConfirm: { relaunch() }
+        )
+    }
+
+    private func relaunch() {
+        let open = Process()
+        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        open.arguments = ["-n", Bundle.main.bundleURL.path]
+        try? open.run()
+        NSApp.terminate(nil)
     }
 
     private func uninstall() {

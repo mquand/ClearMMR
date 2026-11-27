@@ -20,13 +20,14 @@
 |---|---|
 | **Menu Bar hiển thị** | Icon RAM + `%` sử dụng, font `monospacedDigit` chống giật, đổi màu **vàng > 80%**, **đỏ > 90%** |
 | **Popover chi tiết** | RAM đang dùng / tổng, progress bar, breakdown Active – Wired – Compressed |
-| **Chỉ số hệ thống** | CPU %, Swap, dung lượng ổ đĩa trống, Uptime |
+| **Chỉ số hệ thống** | CPU %, Swap, dung lượng ổ đĩa trống, Uptime, **Memory Pressure** (normal/warn/critical) |
+| **Ngưỡng tùy chỉnh** | Đổi ngưỡng vàng/đỏ ngay trong popover, áp dụng cho cả menu bar label |
 | **Top 5 process** | Theo RAM resident + cột CPU %, nút **Force Quit** từng app |
 | **Giải phóng RAM** | Chạy `/usr/sbin/purge` qua `NSAppleScript` (quyền admin), thông báo macOS sau khi xong |
 | **Dọn ổ đĩa** | Quét Caches/Logs/Trash/Xcode caches, hiện dung lượng từng mục, xác nhận rồi xóa |
 | **Login item** | `SMAppService` — khởi động cùng macOS |
 | **Tự cập nhật** | Check GitHub Releases, tải zip, verify SHA-256, tự thay `.app` + relaunch |
-| **Đa ngôn ngữ** | Tiếng Việt (mặc định) + English, tự theo ngôn ngữ hệ thống |
+| **Đa ngôn ngữ** | Tiếng Việt / English / theo hệ thống, chọn ngay trong app (Tùy chọn → Ngôn ngữ) |
 | **Nhẹ** | Cập nhật 2.5s/lần bằng `Task.sleep`, không Timer, CPU ~0% khi idle |
 
 ## Cài đặt

@@ -21,6 +21,8 @@ struct ClearMMRApp: App {
 
 struct RAMMenuLabel: View {
     let percent: Double
+    @AppStorage("warnThreshold") private var warnThreshold = 80
+    @AppStorage("critThreshold") private var critThreshold = 90
 
     var body: some View {
         Label {
@@ -35,8 +37,8 @@ struct RAMMenuLabel: View {
 
     private var color: Color {
         switch percent {
-        case 90...: return .red
-        case 80..<90: return .yellow
+        case Double(critThreshold)...: return .red
+        case Double(warnThreshold)..<Double(critThreshold): return .yellow
         default: return .primary
         }
     }
