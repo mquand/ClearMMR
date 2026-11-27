@@ -36,6 +36,8 @@
 "Không có quyền ghi vào thư mục chứa app." = "No write permission for the app's folder.";
 "File tải về sai checksum, đã hủy cập nhật." = "Downloaded file failed checksum verification, update cancelled.";
 
+"Dọn dẹp" = "Clean Up";
+"Tùy chọn" = "Options";
 "Dọn ổ đĩa" = "Clean Disk";
 "Đang quét…" = "Scanning…";
 "Đang dọn…" = "Cleaning…";

@@ -220,19 +220,37 @@ struct ContentView: View {
             .disabled(monitor.isPurging)
             .frame(maxWidth: .infinity)
 
-            Button {
-                Task {
-                    await cleaner.scan()
-                    if !cleaner.items.isEmpty { showCleanAlert = true }
+            Menu {
+                Button {
+                    Task {
+                        await cleaner.scan()
+                        if !cleaner.items.isEmpty { showCleanAlert = true }
+                    }
+                } label: {
+                    switch cleaner.state {
+                    case .scanning: Text("Đang quét…")
+                    case .cleaning: Text("Đang dọn…")
+                    default: Text("Dọn ổ đĩa")
+                    }
                 }
+                .disabled(cleaner.state != .idle)
+
+                Button {
+                    Task {
+                        await cleaner.scanAdmin()
+                        if cleaner.adminBytes > 0 { showAdminAlert = true }
+                    }
+                } label: {
+                    if cleaner.isAdminCleaning {
+                        Text("Đang dọn hệ thống…")
+                    } else {
+                        Text("Dọn hệ thống (Admin)")
+                    }
+                }
+                .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
             } label: {
-                switch cleaner.state {
-                case .scanning: Label("Đang quét…", systemImage: "internaldrive")
-                case .cleaning: Label("Đang dọn…", systemImage: "internaldrive")
-                default: Label("Dọn ổ đĩa", systemImage: "internaldrive")
-                }
+                Label("Dọn dẹp", systemImage: "internaldrive")
             }
-            .disabled(cleaner.state != .idle)
             .frame(maxWidth: .infinity)
 
             if let message = cleaner.message {
@@ -246,52 +264,37 @@ struct ContentView: View {
                     .foregroundStyle(.green)
             }
 
-            Button {
-                Task {
-                    await cleaner.scanAdmin()
-                    if cleaner.adminBytes > 0 { showAdminAlert = true }
-                }
-            } label: {
-                if cleaner.isAdminCleaning {
-                    Label("Đang dọn hệ thống…", systemImage: "internaldrive")
-                } else {
-                    Label("Dọn hệ thống (Admin)", systemImage: "internaldrive.badge.plus")
-                }
-            }
-            .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
-            .font(.caption)
-            .frame(maxWidth: .infinity)
-
             Toggle("Khởi động cùng macOS", isOn: Binding(
                 get: { monitor.loginItemEnabled },
                 set: { monitor.setLoginItem($0) }
             ))
 
-            HStack {
-                Button {
-                    updater.check()
-                } label: {
-                    Label(updateButtonTitle, systemImage: "arrow.triangle.2.circlepath")
-                }
-                .disabled(updater.state == .checking || updater.state == .downloading)
-
-                if case .failed(let message) = updater.state {
-                    Text("Lỗi: \(message)")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .lineLimit(2)
-                }
+            Button {
+                updater.check()
+            } label: {
+                Label(updateButtonTitle, systemImage: "arrow.triangle.2.circlepath")
             }
-
-            Button("Thoát ClearMMR") {
-                NSApp.terminate(nil)
-            }
+            .disabled(updater.state == .checking || updater.state == .downloading)
             .frame(maxWidth: .infinity)
 
-            Button("Gỡ cài đặt", role: .destructive) {
-                showUninstallAlert = true
+            if case .failed(let message) = updater.state {
+                Text("Lỗi: \(message)")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
             }
-            .font(.caption)
+
+            Menu {
+                Button("Thoát ClearMMR") {
+                    NSApp.terminate(nil)
+                }
+                Divider()
+                Button("Gỡ cài đặt", role: .destructive) {
+                    showUninstallAlert = true
+                }
+            } label: {
+                Label("Tùy chọn", systemImage: "ellipsis.circle")
+            }
             .frame(maxWidth: .infinity)
         }
         .font(.callout)
