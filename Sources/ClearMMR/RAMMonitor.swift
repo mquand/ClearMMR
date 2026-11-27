@@ -160,6 +160,20 @@ final class RAMMonitor: ObservableObject {
 
     // MARK: - Actions
 
+    func openActivityMonitor() {
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app"))
+    }
+
+    func openProcess(_ process: ProcessMemory) {
+        guard let app = NSRunningApplication(processIdentifier: process.pid) else { return }
+        if let bundleURL = app.bundleURL {
+            NSWorkspace.shared.open(bundleURL)
+        } else {
+            let activityMonitor = URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")
+            NSWorkspace.shared.open(activityMonitor)
+        }
+    }
+
     func forceQuit(_ process: ProcessMemory) {
         if let app = NSRunningApplication(processIdentifier: process.pid),
            app.forceTerminate() {

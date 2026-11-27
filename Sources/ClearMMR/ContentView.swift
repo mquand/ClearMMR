@@ -158,9 +158,18 @@ struct ContentView: View {
 
     private var topProcesses: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Top ứng dụng dùng RAM")
-                .font(.callout)
+            HStack {
+                Text("Top ứng dụng dùng RAM")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Activity Monitor") {
+                    monitor.openActivityMonitor()
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+            }
 
             if monitor.processes.isEmpty {
                 Text("Đang tải…")
@@ -169,9 +178,16 @@ struct ContentView: View {
             } else {
                 ForEach(monitor.processes) { process in
                     HStack(spacing: 8) {
-                        Text(process.name)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        Button {
+                            monitor.openProcess(process)
+                        } label: {
+                            Text(process.name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.primary)
+                        .help("Mở \(process.name)")
                         Spacer(minLength: 4)
                         if process.cpuPercent > 0.5 {
                             Text(String(format: "%.0f%%", process.cpuPercent))
