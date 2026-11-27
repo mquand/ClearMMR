@@ -23,11 +23,12 @@ struct ClearMMRApp: App {
         struct Holder { static var installed = false }
         guard !Holder.installed else { return }
         Holder.installed = true
+        let m = monitor
         let handler: (NSEvent) -> Void = { event in
             // ⌥⌘R (keyCode 15) -> Purge RAM nhanh
             if event.keyCode == 15 && event.modifierFlags.intersection([.option, .command, .shift, .control]) == [.option, .command] {
                 Task { @MainActor in
-                    monitor.purge()
+                    m.purge()
                 }
             }
         }
