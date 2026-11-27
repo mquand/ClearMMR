@@ -28,7 +28,7 @@ struct ClearMMRApp: App {
             // ⌥⌘R (keyCode 15) -> Purge RAM nhanh
             if event.keyCode == 15 && event.modifierFlags.intersection([.option, .command, .shift, .control]) == [.option, .command] {
                 Task { @MainActor in
-                    m.purge()
+                    await m.purgeRAM()
                 }
             }
         }
