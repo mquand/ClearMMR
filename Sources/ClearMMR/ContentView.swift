@@ -204,54 +204,80 @@ struct ContentView: View {
 
     private var actions: some View {
         VStack(spacing: 10) {
-            Button {
-                Task { await monitor.purgeRAM() }
-            } label: {
-                if monitor.isPurging {
-                    HStack {
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: 8
+            ) {
+                Button {
+                    Task { await monitor.purgeRAM() }
+                } label: {
+                    if monitor.isPurging {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Đang giải phóng…")
-                    }
-                } else {
-                    Label("Giải phóng RAM", systemImage: "arrow.down.circle")
-                }
-            }
-            .disabled(monitor.isPurging)
-            .frame(maxWidth: .infinity)
-
-            Menu {
-                Button {
-                    Task {
-                        await cleaner.scan()
-                        if !cleaner.items.isEmpty { showCleanAlert = true }
-                    }
-                } label: {
-                    switch cleaner.state {
-                    case .scanning: Text("Đang quét…")
-                    case .cleaning: Text("Đang dọn…")
-                    default: Text("Dọn ổ đĩa")
-                    }
-                }
-                .disabled(cleaner.state != .idle)
-
-                Button {
-                    Task {
-                        await cleaner.scanAdmin()
-                        if cleaner.adminBytes > 0 { showAdminAlert = true }
-                    }
-                } label: {
-                    if cleaner.isAdminCleaning {
-                        Text("Đang dọn hệ thống…")
                     } else {
-                        Text("Dọn hệ thống (Admin)")
+                        Label("Giải phóng RAM", systemImage: "arrow.down.circle")
+                            .labelStyle(.titleAndIcon)
                     }
                 }
-                .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
-            } label: {
-                Label("Dọn dẹp", systemImage: "internaldrive")
+                .disabled(monitor.isPurging)
+
+                Menu {
+                    Button {
+                        Task {
+                            await cleaner.scan()
+                            if !cleaner.items.isEmpty { showCleanAlert = true }
+                        }
+                    } label: {
+                        switch cleaner.state {
+                        case .scanning: Text("Đang quét…")
+                        case .cleaning: Text("Đang dọn…")
+                        default: Text("Dọn ổ đĩa")
+                        }
+                    }
+                    .disabled(cleaner.state != .idle)
+
+                    Button {
+                        Task {
+                            await cleaner.scanAdmin()
+                            if cleaner.adminBytes > 0 { showAdminAlert = true }
+                        }
+                    } label: {
+                        if cleaner.isAdminCleaning {
+                            Text("Đang dọn hệ thống…")
+                        } else {
+                            Text("Dọn hệ thống (Admin)")
+                        }
+                    }
+                    .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
+                } label: {
+                    Label("Dọn dẹp", systemImage: "internaldrive")
+                }
+
+                Button {
+                    updater.check()
+                } label: {
+                    switch updater.state {
+                    case .checking: Label("Đang kiểm tra…", systemImage: "arrow.triangle.2.circlepath")
+                    case .downloading: Label("Đang cập nhật…", systemImage: "arrow.triangle.2.circlepath")
+                    case .available(let tag): Label("Cập nhật lên \(tag)", systemImage: "arrow.triangle.2.circlepath")
+                    default: Label("Kiểm tra cập nhật", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(updater.state == .checking || updater.state == .downloading)
+
+                Menu {
+                    Button("Thoát ClearMMR") {
+                        NSApp.terminate(nil)
+                    }
+                    Divider()
+                    Button("Gỡ cài đặt", role: .destructive) {
+                        showUninstallAlert = true
+                    }
+                } label: {
+                    Label("Tùy chọn", systemImage: "ellipsis.circle")
+                }
             }
-            .frame(maxWidth: .infinity)
+            .controlSize(.small)
 
             if let message = cleaner.message {
                 Text(message)
@@ -269,33 +295,12 @@ struct ContentView: View {
                 set: { monitor.setLoginItem($0) }
             ))
 
-            Button {
-                updater.check()
-            } label: {
-                Label(updateButtonTitle, systemImage: "arrow.triangle.2.circlepath")
-            }
-            .disabled(updater.state == .checking || updater.state == .downloading)
-            .frame(maxWidth: .infinity)
-
             if case .failed(let message) = updater.state {
                 Text("Lỗi: \(message)")
                     .font(.caption)
                     .foregroundStyle(.red)
                     .lineLimit(2)
             }
-
-            Menu {
-                Button("Thoát ClearMMR") {
-                    NSApp.terminate(nil)
-                }
-                Divider()
-                Button("Gỡ cài đặt", role: .destructive) {
-                    showUninstallAlert = true
-                }
-            } label: {
-                Label("Tùy chọn", systemImage: "ellipsis.circle")
-            }
-            .frame(maxWidth: .infinity)
         }
         .font(.callout)
     }
@@ -313,15 +318,6 @@ struct ContentView: View {
             )
         }
         NSApp.terminate(nil)
-    }
-
-    private var updateButtonTitle: LocalizedStringKey {
-        switch updater.state {
-        case .checking: return "Đang kiểm tra…"
-        case .downloading: return "Đang cập nhật…"
-        case .available(let tag): return "Cập nhật lên \(tag)"
-        default: return "Kiểm tra cập nhật"
-        }
     }
 
     // MARK: - Helpers
