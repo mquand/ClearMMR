@@ -66,12 +66,6 @@ struct ContentView: View {
                 Text("\(Int(monitor.percent.rounded()))%")
                     .font(.system(size: 30, weight: .semibold).monospacedDigit())
                     .foregroundStyle(headerColor)
-                Text(pressureString)
-                    .font(.caption2.weight(.medium))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(pressureColor.opacity(0.16), in: Capsule())
-                    .foregroundStyle(pressureColor)
                 ProgressView(value: min(monitor.percent / 100, 1))
                     .tint(headerColor)
             }
@@ -477,34 +471,17 @@ struct SparklineView: View {
     var body: some View {
         GeometryReader { geo in
             let maxVal = max(values.max() ?? 100, 1)
-            let minVal = min(values.min() ?? 0, maxVal - 1)
+            let minVal = max(0, (values.min() ?? 0) - 5)
             let span = max(maxVal - minVal, 1)
-            let linePath = Path { path in
-                for (idx, val) in values.enumerated() {
-                    let x = geo.size.width * CGFloat(idx) / CGFloat(max(values.count - 1, 1))
-                    let y = geo.size.height * (1 - CGFloat((val - minVal) / span))
-                    if idx == 0 {
-                        path.move(to: CGPoint(x: x, y: y))
-                    } else {
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(Array(values.enumerated()), id: \.offset) { idx, val in
+                    let ratio = max(0.12, min(1.0, (val - minVal) / span))
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(color.opacity(idx == values.count - 1 ? 0.95 : 0.45))
+                        .frame(height: max(2, geo.size.height * CGFloat(ratio)))
                 }
             }
-            let fillPath = Path { path in
-                path.addPath(linePath)
-                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
-                path.addLine(to: CGPoint(x: 0, y: geo.size.height))
-                path.closeSubpath()
-            }
-
-            fillPath.fill(
-                LinearGradient(
-                    colors: [color.opacity(0.25), color.opacity(0.0)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            linePath.stroke(color.opacity(0.85), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
     }
 }
