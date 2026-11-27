@@ -490,10 +490,12 @@ struct SparklineView: View {
                     }
                 }
             }
-            var fillPath = linePath
-            fillPath.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
-            fillPath.addLine(to: CGPoint(x: 0, y: geo.size.height))
-            fillPath.closeSubpath()
+            let fillPath = Path { path in
+                path.addPath(linePath)
+                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+                path.addLine(to: CGPoint(x: 0, y: geo.size.height))
+                path.closeSubpath()
+            }
 
             fillPath.fill(
                 LinearGradient(
