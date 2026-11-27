@@ -208,20 +208,20 @@ struct ContentView: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 8
             ) {
-                Button {
-                    Task { await monitor.purgeRAM() }
-                } label: {
-                    if monitor.isPurging {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label("Giải phóng RAM", systemImage: "arrow.down.circle")
-                            .labelStyle(.titleAndIcon)
-                    }
-                }
-                .disabled(monitor.isPurging)
-
                 Menu {
+                    Button {
+                        Task { await monitor.purgeRAM() }
+                    } label: {
+                        if monitor.isPurging {
+                            Text("Đang giải phóng…")
+                        } else {
+                            Label("Giải phóng RAM", systemImage: "arrow.down.circle")
+                        }
+                    }
+                    .disabled(monitor.isPurging)
+
+                    Divider()
+
                     Button {
                         Task {
                             await cleaner.scan()
