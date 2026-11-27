@@ -179,112 +179,106 @@ struct ContentView: View {
     // MARK: - Actions
 
     private var actions: some View {
-        VStack(spacing: 10) {
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: 8
-            ) {
-                Menu {
-                    Button {
-                        Task { await monitor.purgeRAM() }
-                    } label: {
-                        if monitor.isPurging {
-                            Text("Đang giải phóng…")
-                        } else {
-                            Label("Giải phóng RAM", systemImage: "arrow.down.circle")
-                        }
-                    }
-                    .disabled(monitor.isPurging)
-
-                    Divider()
-
-                    Button {
-                        Task {
-                            await cleaner.scan()
-                            guard !cleaner.items.isEmpty else { return }
-                            let list = cleaner.items
-                                .map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
-                                .joined(separator: "\n")
-                            AppAlert.show(
-                                title: "Dọn ổ đĩa?",
-                                message: list,
-                                confirmTitle: "Dọn ngay",
-                                destructive: true
-                            ) {
-                                Task { await cleaner.clean() }
-                            }
-                        }
-                    } label: {
-                        switch cleaner.state {
-                        case .scanning: Text("Đang quét…")
-                        case .cleaning: Text("Đang dọn…")
-                        default: Text("Dọn ổ đĩa")
-                        }
-                    }
-                    .disabled(cleaner.state != .idle)
-
-                    Button {
-                        Task {
-                            await cleaner.scanAdmin()
-                            guard cleaner.adminBytes > 0 else { return }
-                            AppAlert.show(
-                                title: "Dọn sâu (Admin)?",
-                                message: String(format: NSLocalizedString("Xóa cache & log cấp hệ thống (khoảng %@). Cần mật khẩu admin.", comment: ""), formatGB(cleaner.adminBytes)),
-                                confirmTitle: "Dọn ngay",
-                                destructive: true
-                            ) {
-                                Task { await cleaner.cleanAdmin() }
-                            }
-                        }
-                    } label: {
-                        if cleaner.isAdminCleaning {
-                            Text("Đang dọn hệ thống…")
-                        } else {
-                            Text("Dọn hệ thống (Admin)")
-                        }
-                    }
-                    .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
+        VStack(spacing: 8) {
+            Menu {
+                Button {
+                    Task { await monitor.purgeRAM() }
                 } label: {
-                    Label("Dọn dẹp", systemImage: "internaldrive")
+                    if monitor.isPurging {
+                        Text("Đang giải phóng…")
+                    } else {
+                        Label("Giải phóng RAM", systemImage: "arrow.down.circle")
+                    }
                 }
+                .disabled(monitor.isPurging)
+
+                Divider()
 
                 Button {
-                    updater.check()
+                    Task {
+                        await cleaner.scan()
+                        guard !cleaner.items.isEmpty else { return }
+                        let list = cleaner.items
+                            .map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
+                            .joined(separator: "\n")
+                        AppAlert.show(
+                            title: "Dọn ổ đĩa?",
+                            message: list,
+                            confirmTitle: "Dọn ngay",
+                            destructive: true
+                        ) {
+                            Task { await cleaner.clean() }
+                        }
+                    }
                 } label: {
-                    switch updater.state {
-                    case .checking: Label("Đang kiểm tra…", systemImage: "arrow.triangle.2.circlepath")
-                    case .downloading: Label("Đang cập nhật…", systemImage: "arrow.triangle.2.circlepath")
-                    case .available(let tag): Label("Cập nhật lên \(tag)", systemImage: "arrow.triangle.2.circlepath")
-                    default: Label("Kiểm tra cập nhật", systemImage: "arrow.triangle.2.circlepath")
+                    switch cleaner.state {
+                    case .scanning: Text("Đang quét…")
+                    case .cleaning: Text("Đang dọn…")
+                    default: Text("Dọn ổ đĩa")
                     }
                 }
-                .disabled(updater.state == .checking || updater.state == .downloading)
+                .disabled(cleaner.state != .idle)
 
+                Button {
+                    Task {
+                        await cleaner.scanAdmin()
+                        guard cleaner.adminBytes > 0 else { return }
+                        AppAlert.show(
+                            title: "Dọn sâu (Admin)?",
+                            message: String(format: NSLocalizedString("Xóa cache & log cấp hệ thống (khoảng %@). Cần mật khẩu admin.", comment: ""), formatGB(cleaner.adminBytes)),
+                            confirmTitle: "Dọn ngay",
+                            destructive: true
+                        ) {
+                            Task { await cleaner.cleanAdmin() }
+                        }
+                    }
+                } label: {
+                    if cleaner.isAdminCleaning {
+                        Text("Đang dọn hệ thống…")
+                    } else {
+                        Text("Dọn hệ thống (Admin)")
+                    }
+                }
+                .disabled(cleaner.isAdminCleaning || cleaner.state != .idle)
+            } label: {
+                Label("Dọn dẹp", systemImage: "internaldrive")
+                    .frame(maxWidth: .infinity)
+            }
+
+            Menu {
                 Toggle("Khởi động cùng macOS", isOn: Binding(
                     get: { monitor.loginItemEnabled },
                     set: { monitor.setLoginItem($0) }
                 ))
-                .font(.callout)
 
-                Menu {
-                    Button("Thoát ClearMMR") {
-                        NSApp.terminate(nil)
-                    }
-                    Divider()
-                    Button("Gỡ cài đặt", role: .destructive) {
-                        AppAlert.show(
-                            title: "Gỡ cài đặt ClearMMR?",
-                            message: NSLocalizedString("App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay.", comment: ""),
-                            confirmTitle: "Gỡ cài đặt",
-                            destructive: true,
-                            onConfirm: { uninstall() }
-                        )
-                    }
+                Divider()
+
+                Button {
+                    updater.check()
                 } label: {
-                    Label("Tùy chọn", systemImage: "ellipsis.circle")
+                    updateMenuLabel
                 }
+                .disabled(updater.state == .checking || updater.state == .downloading)
+
+                Divider()
+
+                Button("Thoát ClearMMR") {
+                    NSApp.terminate(nil)
+                }
+
+                Button("Gỡ cài đặt", role: .destructive) {
+                    AppAlert.show(
+                        title: "Gỡ cài đặt ClearMMR?",
+                        message: NSLocalizedString("App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay.", comment: ""),
+                        confirmTitle: "Gỡ cài đặt",
+                        destructive: true,
+                        onConfirm: { uninstall() }
+                    )
+                }
+            } label: {
+                Label("Tùy chọn", systemImage: "ellipsis.circle")
+                    .frame(maxWidth: .infinity)
             }
-            .controlSize(.small)
 
             if let message = cleaner.message {
                 Text(message)
@@ -296,7 +290,6 @@ struct ContentView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.green)
             }
-
             if case .failed(let message) = updater.state {
                 Text("Lỗi: \(message)")
                     .font(.caption)
@@ -305,6 +298,15 @@ struct ContentView: View {
             }
         }
         .font(.callout)
+    }
+
+    private var updateMenuLabel: Text {
+        switch updater.state {
+        case .checking: return Text("Đang kiểm tra…")
+        case .downloading: return Text("Đang cập nhật…")
+        case .available(let tag): return Text("Cập nhật lên \(tag)")
+        default: return Text("Kiểm tra cập nhật")
+        }
     }
 
     private func uninstall() {

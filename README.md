@@ -1,6 +1,6 @@
 <div align="center">
 
-![ClearMMR](Resources/AppIcon-1024.png =160x160)
+<img src="Resources/AppIcon-1024.png" width="160" height="160" alt="ClearMMR">
 
 # ClearMMR
 
@@ -52,9 +52,8 @@ Popover  :  ┌─────────────────────�
             │ Active / Wired / Compressed   │
             │ Top ứng dụng dùng RAM         │
             │  Safari   1.2 GB  3%  [⏻]     │
-            │ [ Giải phóng RAM ]            │
-            │ [x] Khởi động cùng macOS      │
-            │ [ Thoát ClearMMR ]            │
+            │ [        Dọn dẹp        ▾ ]   │
+            │ [      Tùy chọn        ⋯ ]    │
             └──────────────────────────────┘
 ```
 
