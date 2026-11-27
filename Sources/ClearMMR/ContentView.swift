@@ -5,10 +5,6 @@ struct ContentView: View {
     @EnvironmentObject private var monitor: RAMMonitor
     @EnvironmentObject private var updater: AppUpdater
     @EnvironmentObject private var cleaner: DiskCleaner
-    @State private var showUpdateAlert = false
-    @State private var showCleanAlert = false
-    @State private var showAdminAlert = false
-    @State private var showUninstallAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -29,39 +25,19 @@ struct ContentView: View {
             updater.checkIfNeeded()
         }
         .onChange(of: updater.state) { newState in
-            if case .available = newState { showUpdateAlert = true }
+            if case .available(let tag) = newState {
+                AppAlert.show(
+                    title: "Có bản cập nhật mới",
+                    message: String(format: NSLocalizedString("Phiên bản %@ đã sẵn sàng. App sẽ tự tải, cài đặt và khởi động lại.", comment: ""), tag),
+                    confirmTitle: "Cập nhật",
+                    cancelTitle: "Để sau",
+                    onConfirm: { updater.install() },
+                    onCancel: { updater.dismiss() }
+                )
+            }
         }
         .onChange(of: cleaner.lastFreed) { freed in
             if freed != nil { monitor.refresh() }
-        }
-        .alert("Có bản cập nhật mới", isPresented: $showUpdateAlert) {
-            Button("Cập nhật") { updater.install() }
-            Button("Để sau", role: .cancel) { updater.dismiss() }
-        } message: {
-            Text("Phiên bản \(updater.latestTag) đã sẵn sàng. App sẽ tự tải, cài đặt và khởi động lại.")
-        }
-        .alert("Dọn ổ đĩa?", isPresented: $showCleanAlert) {
-            Button("Dọn ngay", role: .destructive) {
-                Task { await cleaner.clean() }
-            }
-            Button("Hủy", role: .cancel) {}
-        } message: {
-            Text(cleaner.items.map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
-                .joined(separator: "\n"))
-        }
-        .alert("Dọn sâu (Admin)?", isPresented: $showAdminAlert) {
-            Button("Dọn ngay", role: .destructive) {
-                Task { await cleaner.cleanAdmin() }
-            }
-            Button("Hủy", role: .cancel) {}
-        } message: {
-            Text("Xóa cache & log cấp hệ thống (khoảng \(formatGB(cleaner.adminBytes))). Cần mật khẩu admin.")
-        }
-        .alert("Gỡ cài đặt ClearMMR?", isPresented: $showUninstallAlert) {
-            Button("Gỡ cài đặt", role: .destructive) { uninstall() }
-            Button("Hủy", role: .cancel) {}
-        } message: {
-            Text("App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay.")
         }
     }
 
@@ -225,7 +201,18 @@ struct ContentView: View {
                     Button {
                         Task {
                             await cleaner.scan()
-                            if !cleaner.items.isEmpty { showCleanAlert = true }
+                            guard !cleaner.items.isEmpty else { return }
+                            let list = cleaner.items
+                                .map { "\($0.localizedTitle): \(formatGB($0.bytes))" }
+                                .joined(separator: "\n")
+                            AppAlert.show(
+                                title: "Dọn ổ đĩa?",
+                                message: list,
+                                confirmTitle: "Dọn ngay",
+                                destructive: true
+                            ) {
+                                Task { await cleaner.clean() }
+                            }
                         }
                     } label: {
                         switch cleaner.state {
@@ -239,7 +226,15 @@ struct ContentView: View {
                     Button {
                         Task {
                             await cleaner.scanAdmin()
-                            if cleaner.adminBytes > 0 { showAdminAlert = true }
+                            guard cleaner.adminBytes > 0 else { return }
+                            AppAlert.show(
+                                title: "Dọn sâu (Admin)?",
+                                message: String(format: NSLocalizedString("Xóa cache & log cấp hệ thống (khoảng %@). Cần mật khẩu admin.", comment: ""), formatGB(cleaner.adminBytes)),
+                                confirmTitle: "Dọn ngay",
+                                destructive: true
+                            ) {
+                                Task { await cleaner.cleanAdmin() }
+                            }
                         }
                     } label: {
                         if cleaner.isAdminCleaning {
@@ -265,13 +260,25 @@ struct ContentView: View {
                 }
                 .disabled(updater.state == .checking || updater.state == .downloading)
 
+                Toggle("Khởi động cùng macOS", isOn: Binding(
+                    get: { monitor.loginItemEnabled },
+                    set: { monitor.setLoginItem($0) }
+                ))
+                .font(.callout)
+
                 Menu {
                     Button("Thoát ClearMMR") {
                         NSApp.terminate(nil)
                     }
                     Divider()
                     Button("Gỡ cài đặt", role: .destructive) {
-                        showUninstallAlert = true
+                        AppAlert.show(
+                            title: "Gỡ cài đặt ClearMMR?",
+                            message: NSLocalizedString("App sẽ chuyển vào Thùng rác, gỡ khỏi login items và thoát ngay.", comment: ""),
+                            confirmTitle: "Gỡ cài đặt",
+                            destructive: true,
+                            onConfirm: { uninstall() }
+                        )
                     }
                 } label: {
                     Label("Tùy chọn", systemImage: "ellipsis.circle")
@@ -289,11 +296,6 @@ struct ContentView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.green)
             }
-
-            Toggle("Khởi động cùng macOS", isOn: Binding(
-                get: { monitor.loginItemEnabled },
-                set: { monitor.setLoginItem($0) }
-            ))
 
             if case .failed(let message) = updater.state {
                 Text("Lỗi: \(message)")
@@ -324,5 +326,39 @@ struct ContentView: View {
 
     private func formatGB(_ bytes: UInt64) -> String {
         String(format: "%.1f GB", Double(bytes) / Double(1 << 30))
+    }
+}
+
+@MainActor
+enum AppAlert {
+    static func show(
+        title: String,
+        message: String,
+        confirmTitle: String,
+        cancelTitle: String = "Hủy",
+        destructive: Bool = false,
+        onConfirm: @escaping () -> Void,
+        onCancel: (() -> Void)? = nil
+    ) {
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString(title, comment: "")
+        alert.informativeText = message
+        alert.alertStyle = destructive ? .warning : .informational
+
+        let confirm = alert.addButton(withTitle: NSLocalizedString(confirmTitle, comment: ""))
+        confirm.hasDestructiveAction = destructive
+        _ = alert.addButton(withTitle: NSLocalizedString(cancelTitle, comment: ""))
+
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            onConfirm()
+        } else {
+            onCancel?()
+        }
     }
 }
