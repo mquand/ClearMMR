@@ -221,7 +221,10 @@ final class RAMMonitor: ObservableObject {
         }
     }
 
+    private let loginItemKey = "loginItemDesired"
+
     func setLoginItem(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: loginItemKey)
         do {
             if enabled {
                 try SMAppService.mainApp.register()
@@ -239,7 +242,14 @@ final class RAMMonitor: ObservableObject {
             loginItemEnabled = false
             return
         }
-        loginItemEnabled = SMAppService.mainApp.status == .enabled
+        // Ad-hoc sign đổi chữ ký sau mỗi bản build → login item hay bị reset.
+        // Nếu user đã bật trước đó thì tự đăng ký lại mỗi lần app mở.
+        if UserDefaults.standard.bool(forKey: loginItemKey),
+           SMAppService.mainApp.status != .enabled {
+            try? SMAppService.mainApp.register()
+        }
+        let status = SMAppService.mainApp.status
+        loginItemEnabled = status == .enabled || status == .requiresApproval
     }
 
     // MARK: - Notifications
