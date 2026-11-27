@@ -7,8 +7,9 @@ import Darwin
 struct ProcessMemory: Identifiable, Hashable {
     let pid: pid_t
     let name: String
-    let residentBytes: UInt64
+    var residentBytes: UInt64
     var cpuPercent: Double = 0
+    var count: Int = 1
 
     var id: pid_t { pid }
 }
@@ -173,7 +174,18 @@ final class RAMMonitor: ObservableObject {
         }
 
         procLastSample = procLastSample.filter { seenPids.contains($0.key) }
-        return Array(result.sorted { $0.residentBytes > $1.residentBytes }.prefix(limit))
+        var grouped: [String: ProcessMemory] = [:]
+        for item in result {
+            if var existing = grouped[item.name] {
+                existing.residentBytes += item.residentBytes
+                existing.cpuPercent += item.cpuPercent
+                existing.count += 1
+                grouped[item.name] = existing
+            } else {
+                grouped[item.name] = item
+            }
+        }
+        return Array(grouped.values.sorted { $0.residentBytes > $1.residentBytes }.prefix(limit))
     }
 
     // pti_total_user/pti_total_system của proc_taskinfo tính bằng nanosecond

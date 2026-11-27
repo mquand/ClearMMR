@@ -66,6 +66,12 @@ struct ContentView: View {
                 Text("\(Int(monitor.percent.rounded()))%")
                     .font(.system(size: 30, weight: .semibold).monospacedDigit())
                     .foregroundStyle(headerColor)
+                Text(pressureString)
+                    .font(.caption2.weight(.medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(pressureColor.opacity(0.16), in: Capsule())
+                    .foregroundStyle(pressureColor)
                 ProgressView(value: min(monitor.percent / 100, 1))
                     .tint(headerColor)
             }
@@ -95,7 +101,6 @@ struct ContentView: View {
             statBox(title: "Swap", value: "\(formatGB(monitor.swapUsedBytes)) / \(formatGB(monitor.swapTotalBytes))")
             statBox(title: "Ổ đĩa trống", value: formatGB(monitor.diskFreeBytes))
             statBox(title: "Uptime", value: uptimeString)
-            statBox(title: "Bộ nhớ", value: pressureString, color: pressureColor)
         }
     }
 
@@ -190,7 +195,7 @@ struct ContentView: View {
                         Button {
                             monitor.openProcess(process)
                         } label: {
-                            Text(process.name)
+                            Text(process.count > 1 ? "\(process.name) (\(process.count))" : process.name)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
@@ -233,7 +238,7 @@ struct ContentView: View {
                     if monitor.isPurging {
                         Text("Đang giải phóng…")
                     } else {
-                        Label("Giải phóng RAM", systemImage: "arrow.down.circle")
+                        Label("Giải phóng RAM (⌥⌘R)", systemImage: "arrow.down.circle")
                     }
                 }
                 .disabled(monitor.isPurging)
@@ -474,7 +479,7 @@ struct SparklineView: View {
             let maxVal = max(values.max() ?? 100, 1)
             let minVal = min(values.min() ?? 0, maxVal - 1)
             let span = max(maxVal - minVal, 1)
-            Path { path in
+            let linePath = Path { path in
                 for (idx, val) in values.enumerated() {
                     let x = geo.size.width * CGFloat(idx) / CGFloat(max(values.count - 1, 1))
                     let y = geo.size.height * (1 - CGFloat((val - minVal) / span))
@@ -485,7 +490,19 @@ struct SparklineView: View {
                     }
                 }
             }
-            .stroke(color.opacity(0.8), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            var fillPath = linePath
+            fillPath.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+            fillPath.addLine(to: CGPoint(x: 0, y: geo.size.height))
+            fillPath.closeSubpath()
+
+            fillPath.fill(
+                LinearGradient(
+                    colors: [color.opacity(0.25), color.opacity(0.0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            linePath.stroke(color.opacity(0.85), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
         }
     }
 }
